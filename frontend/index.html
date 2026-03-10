@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduling System - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <h2>Welcome Back</h2>
+            <p>Automated Conflict-Free Scheduling System</p>
+            <form id="loginForm">
+                <div class="input-group" style="margin-bottom: 20px;">
+                    <label>Login As</label>
+                    <select id="role" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="hod">Head of Department</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="input-group" id="nameGroup" style="display: none;">
+                    <label>Username</label>
+                    <input type="text" id="name">
+                </div>
+                <div class="input-group" id="rollnoGroup">
+                    <label id="rollnoLabel">Roll No. / Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn primary">Login</button>
+                <div id="error-msg" class="error"></div>
+            </form>
+            <div class="demo-hints">
+                <small>Admin: admin / 123 | HOD: hod1 / 123</small><br>
+                <small>Teacher: teacher1 / 123 | Student: student1 / 123</small>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        document.getElementById('role').addEventListener('change', function() {
+            const role = this.value;
+            const nameGroup = document.getElementById('nameGroup');
+            const rollnoLabel = document.getElementById('rollnoLabel');
+            
+            if (role === 'student') {
+                nameGroup.style.display = 'block';
+                document.getElementById('name').required = true;
+                rollnoLabel.textContent = 'Roll No.';
+            } else {
+                nameGroup.style.display = 'none';
+                document.getElementById('name').required = false;
+                rollnoLabel.textContent = 'Roll No. / Username';
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const role = document.getElementById('role').value;
+            const name = document.getElementById('name').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            try {
+                const data = await api.post('/auth/login', { name, username, password, role });
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userRole', data.user.role);
+                localStorage.setItem('userId', data.user.id);
+                localStorage.setItem('userName', data.user.name);
+
+                if (data.user.role === 'admin' || data.user.role === 'hod') {
+                    window.location.href = 'admin-dashboard.html';
+                } else if (data.user.role === 'student') {
+                    window.location.href = 'student-dashboard.html';
+                } else {
+                    window.location.href = 'timetable.html';
+                }
+            } catch (err) {
+                errorMsg.textContent = err.message;
+            }
+        });
+    </script>
+</body>
+</html>

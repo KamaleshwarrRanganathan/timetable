@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .notification-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid var(--primary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-card.unread {
+            border-left-color: var(--danger-color);
+            background: #fffcfd;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <h2>Notifications Panel</h2>
+        <div class="nav-links">
+            <a href="#" id="homeLink">Dashboard</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="notificationsList">
+            <p>Loading notifications...</p>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        const role = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('userId');
+
+        if (role === 'admin') {
+            document.getElementById('homeLink').href = 'admin-dashboard.html';
+        } else {
+            document.getElementById('homeLink').href = 'timetable.html';
+        }
+
+        async function loadNotifications() {
+            try {
+                // For admin, we might show a different view, but let's assume personal notifications
+                const data = await api.get(`/notifications?user_id=${userId}`);
+                const list = document.getElementById('notificationsList');
+
+                if (data.length === 0) {
+                    list.innerHTML = '<p>You have no notifications.</p>';
+                    return;
+                }
+
+                list.innerHTML = data.map(n => {
+                    let actions = '';
+                    if (role === 'hod' && n.type === 'od_request') {
+                        if (n.od_status === 'Pending') {
+                            actions = `
+                                <div style="display:flex; gap:10px;">
+                                    <button class="btn primary" style="width:auto; padding:8px 15px;" onclick="actionOD(${n.id}, ${n.related_id}, 'approve')">Approve</button>
+                                    <button class="btn" style="width:auto; padding:8px 15px; background:var(--danger-color); color:white;" onclick="actionOD(${n.id}, ${n.related_id}, 'reject')">Reject</button>
+                                </div>
+                            `;
+                        } else if (n.od_status) {
+                            actions = `<span style="font-weight:bold; font-size: 0.9em; padding: 5px 10px; border-radius: 4px; background: #f0f0f0;">Status: ${n.od_status}</span>`;
+                        } else {
+                            actions = !n.is_read ? `<button class="btn primary" style="width:auto; padding:8px 15px;" onclick="markRead(${n.id})">Mark Read</button>` : '<span>Read</span>';
+                        }
+                    } else {
+                        actions = !n.is_read ? `<button class="btn primary" style="width:auto; padding:8px 15px;" onclick="markRead(${n.id})">Mark Read</button>` : '<span>Read</span>';
+                    }
+
+                    return `
+                    <div class="notification-card ${n.is_read ? '' : 'unread'}">
+                        <div>
+                            <p>${n.message}</p>
+                            <small class="text-muted">${new Date(n.created_at).toLocaleString()}</small>
+                        </div>
+                        <div>
+                            ${actions}
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('notificationsList').innerHTML = '<p class="error">Failed to load notifications.</p>';
+            }
+        }
+
+        async function markRead(id) {
+            try {
+                await api.put(`/notifications/${id}/read`);
+                loadNotifications();
+            } catch (err) {
+                alert('Error marking as read');
+            }
+        }
+
+        async function actionOD(notifId, odId, action) {
+            try {
+                await api.put(`/student/od-requests/${odId}/${action}`);
+                await api.put(`/notifications/${notifId}/read`);
+                loadNotifications();
+            } catch (err) {
+                alert('Error processing OD request: ' + err.message);
+            }
+        }
+
+        loadNotifications();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h2>Student Portal</h2>
+        <div class="nav-links">
+            <a href="#" onclick="showProfile()">Profile</a>
+            <a href="timetable.html">My Timetable</a>
+            <a href="notifications.html">Notes/Notifications</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+        <div style="background:white; padding:30px; border-radius:10px; width:450px; margin:50px auto; position:relative; max-height:80vh; overflow-y:auto;">
+            <button onclick="document.getElementById('profileModal').style.display='none'" style="position:absolute; right:15px; top:15px; background:none; border:none; cursor:pointer; font-size:1.5em;">&times;</button>
+            <h2>My Profile</h2>
+            <div id="profileContent" style="margin-top:20px; line-height:1.6;">Loading...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Welcome, <span id="studentName"></span> (Roll No: <span id="studentRoll"></span>)</h2>
+        
+        <div class="dashboard-grid">
+            <div class="card" onclick="viewSection('results')">
+                <h3>Exam Results</h3>
+                <p>View your marks</p>
+            </div>
+            <div class="card" onclick="viewSection('exam-timetable')">
+                <h3>Exam Timetable</h3>
+                <p>View upcoming exams</p>
+            </div>
+            <div class="card" onclick="viewSection('od')">
+                <h3>On-Duty (OD)</h3>
+                <p>Request OD to HOD</p>
+            </div>
+            <div class="card" onclick="viewSection('absence')">
+                <h3>Absence Post</h3>
+                <p>Post absence reasons</p>
+            </div>
+        </div>
+
+        <hr style="margin: 30px 0; border:0; border-top: 1px solid #ddd;">
+        
+        <div id="contentArea"></div>
+
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        document.getElementById('studentName').textContent = localStorage.getItem('userName');
+        document.getElementById('studentRoll').textContent = localStorage.getItem('userId'); // Simplification for demo
+
+        async function showProfile() {
+            document.getElementById('profileModal').style.display = 'block';
+            await loadProfileData();
+        }
+
+        async function loadProfileData() {
+            try {
+                const user = await api.get(`/student/profile?user_id=${localStorage.getItem('userId')}`);
+                document.getElementById('profileContent').innerHTML = `
+                    <p><strong>Full Name:</strong> ${user.name}</p>
+                    <p><strong>Roll No:</strong> ${user.username}</p>
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
+                    <p><strong>Address:</strong> ${user.address || 'N/A'}</p>
+                    <p><strong>Semester:</strong> ${user.semester || 'N/A'}</p>
+                    <p><strong>Arrears:</strong> <span style="color:${user.arrears > 0 ? 'red' : 'green'}">${user.arrears || 0}</span></p>
+                    <p><strong>Fees Detail:</strong> <span style="color:${user.fees === 'Cleared' ? 'green' : 'orange'}">${user.fees || 'Pending'}</span></p>
+                    <button class="btn primary" style="margin-top:20px; width:100%;" onclick='editProfile(${JSON.stringify(user).replace(/'/g, "&apos;")})'>Edit Details / Store Data</button>
+                `;
+            } catch (err) {
+                document.getElementById('profileContent').innerHTML = `<p class="error">Error loading profile.</p>`;
+            }
+        }
+
+        function editProfile(user) {
+            document.getElementById('profileContent').innerHTML = `
+                <form id="editProfileForm">
+                    <label>Phone:</label>
+                    <input type="text" id="profPhone" value="${user.phone || ''}" style="width:100%; padding:8px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;">
+                    <label>Address:</label>
+                    <input type="text" id="profAddress" value="${user.address || ''}" style="width:100%; padding:8px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;">
+                    <label>Semester:</label>
+                    <input type="text" id="profSem" value="${user.semester || ''}" style="width:100%; padding:8px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;">
+                    <label>Arrears Count:</label>
+                    <input type="number" id="profArrears" value="${user.arrears || 0}" style="width:100%; padding:8px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;">
+                    <label>Fees Status:</label>
+                    <select id="profFees" style="width:100%; padding:8px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc;">
+                        <option value="Pending" ${user.fees === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Cleared" ${user.fees === 'Cleared' ? 'selected' : ''}>Cleared</option>
+                        <option value="Scholarship" ${user.fees === 'Scholarship' ? 'selected' : ''}>Scholarship</option>
+                    </select>
+                    <button type="submit" class="btn primary" style="width:100%;">Save Details</button>
+                    <button type="button" class="btn" style="width:100%; margin-top:10px; background:#ccc; color:#333;" onclick="loadProfileData()">Cancel</button>
+                </form>
+            `;
+            document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await api.put('/student/profile', {
+                    user_id: user.id,
+                    phone: document.getElementById('profPhone').value,
+                    address: document.getElementById('profAddress').value,
+                    semester: document.getElementById('profSem').value,
+                    arrears: document.getElementById('profArrears').value,
+                    fees: document.getElementById('profFees').value
+                });
+                alert('Profile Data Stored!');
+                await loadProfileData();
+            });
+        }
+
+        async function viewSection(section) {
+            const content = document.getElementById('contentArea');
+            content.innerHTML = '<p>Loading...</p>';
+            const userId = localStorage.getItem('userId');
+            const userName = localStorage.getItem('userName');
+            
+            try {
+                if (section === 'results') {
+                    const data = await api.get('/student/results');
+                    const myResults = data.filter(r => r.student_id == userId);
+                    if (myResults.length === 0) content.innerHTML = '<p>No results found.</p>';
+                    else content.innerHTML = `<h3>Results</h3>` + myResults.map(r => `
+                        <div class="form-container" style="margin-bottom: 20px;">
+                            <h4>${r.term}</h4>
+                            <p>${r.details}</p>
+                        </div>
+                    `).join('');
+                }
+                
+                else if (section === 'exam-timetable') {
+                    const data = await api.get('/student/exam-timetable');
+                    if (data.length === 0) content.innerHTML = '<p>No exams scheduled.</p>';
+                    else content.innerHTML = `<h3>Exam Timetable</h3><table>
+                        <tr><th>Subject</th><th>Date</th><th>Time</th></tr>
+                        ${data.map(e => `<tr><td>${e.subject}</td><td>${e.date}</td><td>${e.time}</td></tr>`).join('')}
+                    </table>`;
+                }
+
+                else if (section === 'od') {
+                    const reqs = await api.get('/student/od-requests');
+                    const myReqs = reqs.filter(r => r.student_id == userId);
+                    
+                    content.innerHTML = `
+                        <h3>On-Duty Requests</h3>
+                        <div class="form-container" style="margin-bottom: 20px;">
+                            <form id="odForm">
+                                <label>Date:</label>
+                                <input type="date" id="odDate" required style="width:100%; padding:10px; margin-top:5px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc;">
+                                <label>Reason for OD:</label>
+                                <input type="text" id="odReason" required style="width:100%; padding:10px; margin-top:5px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc;">
+                                <button type="submit" class="btn primary">Submit OD Request to HOD</button>
+                            </form>
+                        </div>
+                        <h4>Past Requests Status</h4>
+                        <ul>${myReqs.map(r => `<li>${r.date || 'N/A'}: ${r.reason} - <strong>${r.status}</strong></li>`).join('')}</ul>
+                    `;
+
+                    document.getElementById('odForm').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const date = document.getElementById('odDate').value;
+                        const reason = document.getElementById('odReason').value;
+                        await api.post('/student/od-requests', { student_id: userId, student_name: userName, date, reason });
+                        alert('Submitted!');
+                        viewSection('od');
+                    });
+                }
+
+                else if (section === 'absence') {
+                    const data = await api.get('/student/absences');
+                    const myAbs = data.filter(abs => abs.student_id == userId);
+
+                    content.innerHTML = `
+                        <h3>Post Absence Reason</h3>
+                        <div class="form-container" style="margin-bottom: 20px;">
+                            <form id="absenceForm">
+                                <label>Date:</label>
+                                <input type="date" id="absDate" required style="width:100%; padding:10px; margin-top:5px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc;">
+                                <label>Reason:</label>
+                                <input type="text" id="absReason" required style="width:100%; padding:10px; margin-top:5px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc;">
+                                <button type="submit" class="btn primary">Post Absence</button>
+                            </form>
+                        </div>
+                        <h4>My Posts</h4>
+                        <ul>${myAbs.map(a => `<li>${a.date} - ${a.reason}</li>`).join('')}</ul>
+                    `;
+
+                    document.getElementById('absenceForm').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const date = document.getElementById('absDate').value;
+                        const reason = document.getElementById('absReason').value;
+                        await api.post('/student/absences', { student_id: userId, student_name: userName, date, reason });
+                        alert('Posted!');
+                        viewSection('absence');
+                    });
+                }
+            } catch (err) {
+                content.innerHTML = `<p class="error">Error: ${err.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

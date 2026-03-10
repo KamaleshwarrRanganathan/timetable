@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable View</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h2>Schedule View</h2>
+        <div class="nav-links">
+            <a href="#" id="homeLink">Dashboard</a>
+            <a href="notifications.html">Notifications</a>
+            <a href="#" id="markAbsentBtn" style="display:none; color:var(--danger-color);">Mark Absent</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2>Your Weekly Timetable</h2>
+        <div id="timetableContainer" class="timetable-grid">
+            <!-- Grid generated dynamically -->
+        </div>
+    </div>
+
+    <!-- Mark Absent Modal -->
+    <div id="absentModal" style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%); background:white; padding:30px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:1000;">
+        <h3>Register Absence</h3>
+        <form id="absentForm">
+            <div class="input-group">
+                <label>Date</label>
+                <input type="date" id="absentDate" required>
+            </div>
+            <div class="input-group">
+                <label>Reason</label>
+                <input type="text" id="absentReason" required>
+            </div>
+            <button type="submit" class="btn primary">Submit Absence</button>
+            <button type="button" class="btn" onclick="document.getElementById('absentModal').style.display='none'">Cancel</button>
+        </form>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        const role = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('userId');
+
+        if (role === 'admin') {
+            document.getElementById('homeLink').href = 'admin-dashboard.html';
+        } else {
+            document.getElementById('homeLink').href = 'timetable.html';
+        }
+
+        if (role === 'teacher') {
+            document.getElementById('markAbsentBtn').style.display = 'inline-block';
+            document.getElementById('markAbsentBtn').onclick = () => {
+                document.getElementById('absentModal').style.display = 'block';
+            };
+        }
+
+        document.getElementById('absentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const date = document.getElementById('absentDate').value;
+            const reason = document.getElementById('absentReason').value;
+
+            try {
+                const res = await api.post('/absences', { teacher_id: userId, date, reason });
+                alert(res.message);
+                document.getElementById('absentModal').style.display = 'none';
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        async function loadTimetable() {
+            try {
+                // Determine query params based on role (simplification: admin sees all)
+                let query = '';
+                if (role === 'teacher') query = `?role=teacher&user_id=${userId}`;
+                // Setup for students would require selecting a class or binding class_id to student user
+                
+                const data = await api.get(`/timetable${query}`);
+                const container = document.getElementById('timetableContainer');
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>No schedule generated yet.</p>';
+                    return;
+                }
+
+                // Group by day for simple display
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                
+                let html = '';
+                days.forEach(day => {
+                    html += `<div class="tt-cell tt-header">${day}</div>`;
+                });
+
+                // Assuming a fixed 3 slots a day for the demo layout
+                for (let i = 0; i < 3; i++) {
+                    days.forEach(day => {
+                        // Find matching slot (very simplified logic for the mini-project grid presentation)
+                        const slotTasks = data.filter(t => t.day_of_week === day);
+                        const task = slotTasks[i];
+                        if(task) {
+                            html += `<div class="tt-cell">
+                                <strong>${task.subject_name}</strong><br>
+                                <small>${task.start_time} - ${task.end_time}</small><br>
+                                <small>Class: ${task.class_name}</small><br>
+                                <small>Room: ${task.classroom_name}</small><br>
+                                <small>Prof: ${task.teacher_name}</small>
+                            </div>`;
+                        } else {
+                            html += `<div class="tt-cell" style="background:#f1f1f1; border-color:#ddd;">Free</div>`;
+                        }
+                    });
+                }
+                container.innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        
+        loadTimetable();
+    </script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Subject</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h2>Admin Panel - Add Subject</h2>
+        <div class="nav-links">
+            <a href="admin-dashboard.html">Back to Dashboard</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container">
+            <h2>Register New Subject</h2>
+            <form id="addSubjectForm">
+                <div class="input-group">
+                    <label>Subject Name</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="input-group">
+                    <label>Subject Code</label>
+                    <input type="text" id="code" required>
+                </div>
+                <button type="submit" class="btn primary">Add Subject</button>
+            </form>
+        </div>
+
+        <h3 style="margin-top:40px;">Subjects List</h3>
+        <table id="subjectsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Code</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        document.getElementById('addSubjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('name').value,
+                code: document.getElementById('code').value
+            };
+
+            try {
+                await api.post('/admin/subjects', payload);
+                alert('Subject added successfully!');
+                e.target.reset();
+                loadSubjects();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        async function loadSubjects() {
+            try {
+                const subjects = await api.get('/admin/subjects');
+                const tbody = document.querySelector('#subjectsTable tbody');
+                tbody.innerHTML = '';
+                subjects.forEach(s => {
+                    tbody.innerHTML += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.code}</td></tr>`;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        loadSubjects();
+    </script>
+</body>
+</html>

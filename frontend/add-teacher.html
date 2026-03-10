@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Teacher</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h2>Admin Panel - Add Teacher</h2>
+        <div class="nav-links">
+            <a href="admin-dashboard.html">Back to Dashboard</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container">
+            <h2>Add New User (Teacher / HOD / Student)</h2>
+            <form id="addTeacherForm">
+                <div class="input-group" style="margin-bottom: 20px;">
+                    <label>Assign Role</label>
+                    <select id="newRole" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="hod">Head of Department</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="input-group">
+                    <label>Roll No.</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn primary">Add User</button>
+            </form>
+        </div>
+
+        <h3 style="margin-top:40px;">Registered Users List</h3>
+        <table id="teachersTable">
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Name</th>
+                    <th>Roll No.</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        document.getElementById('addTeacherForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                role: document.getElementById('newRole').value,
+                name: document.getElementById('name').value,
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                await api.post('/admin/teachers', payload);
+                alert('User added successfully!');
+                e.target.reset();
+                loadTeachers();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        async function loadTeachers() {
+            try {
+                const teachers = await api.get('/admin/teachers');
+                const tbody = document.querySelector('#teachersTable tbody');
+                tbody.innerHTML = '';
+                teachers.forEach(t => {
+                    tbody.innerHTML += `<tr><td>${t.role.toUpperCase()}</td><td>${t.name}</td><td>${t.username}</td><td>${t.email}</td></tr>`;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        loadTeachers();
+    </script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOD Dashboard - Cohort Oversight</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .request-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .request-card.pending {
+            border-left-color: #f1c40f;
+        }
+
+        .request-card.approved {
+            border-left-color: var(--success-color);
+        }
+
+        .request-card.rejected {
+            border-left-color: var(--danger-color);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+            align-items: flex-end;
+        }
+
+        .section-block {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <h2>Cohort Oversight</h2>
+        <div class="nav-links">
+            <a href="admin-dashboard.html">Admin Dashboard</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="filter-bar">
+            <div class="input-group" style="margin-bottom:0; flex-grow:1;">
+                <label>Course Year</label>
+                <select id="filterYear">
+                    <option value="all">All Years</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+            </div>
+            <div class="input-group" style="margin-bottom:0; flex-grow:1;">
+                <label>Section</label>
+                <select id="filterSection">
+                    <option value="all">All Sections</option>
+                    <option value="A">Section A</option>
+                    <option value="B">Section B</option>
+                    <option value="C">Section C</option>
+                </select>
+            </div>
+            <button class="btn primary" onclick="loadCohortData()"
+                style="width: auto; height:45px; margin-bottom:0;">Load Cohort Data</button>
+        </div>
+
+        <div id="dataContainer" style="display: none;">
+
+            <div class="section-block">
+                <h2 style="margin-bottom: 15px; font-size:1.4em;">Student List</h2>
+                <div style="overflow-x: auto;">
+                    <table id="studentsTable">
+                        <thead>
+                            <tr>
+                                <th>Roll No.</th>
+                                <th>Name</th>
+                                <th>Year/Sec</th>
+                                <th>Gender</th>
+                                <th>Course</th>
+                                <th>Phone</th>
+                                <th>Fees</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section-block">
+                <h2 style="margin-bottom: 15px; font-size:1.4em;">Class Timetable</h2>
+                <div id="timetableContainer" class="timetable-grid"></div>
+            </div>
+
+            <div class="section-block">
+                <h2 style="margin-bottom: 15px; font-size:1.4em;">Academic Performance</h2>
+                <table id="marksTable">
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Term / Exam</th>
+                            <th>Marks & Details</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="grid-container">
+                <div class="section-block">
+                    <h2 style="margin-bottom: 15px; font-size:1.4em;">OD Requests <small>(Pending)</small></h2>
+                    <div id="odContainer">Loading...</div>
+                </div>
+
+                <div class="section-block">
+                    <h2 style="margin-bottom: 15px; font-size:1.4em;">Student Absences</h2>
+                    <table id="absencesTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Student</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        const role = localStorage.getItem('userRole');
+
+        async function loadCohortData() {
+            const year = document.getElementById('filterYear').value;
+            const section = document.getElementById('filterSection').value;
+
+            document.getElementById('dataContainer').style.display = 'block';
+
+            try {
+                // Fetch All Data for the specific cohort
+                const [timetable, marks, requests, absences, students] = await Promise.all([
+                    api.get(`/timetable?year=${year}&section=${section}`),
+                    api.get(`/student/results?year=${year}&section=${section}`),
+                    api.get(`/student/od-requests?year=${year}&section=${section}`),
+                    api.get(`/student/absences?year=${year}&section=${section}`),
+                    api.get(`/student/list?year=${year}&section=${section}`)
+                ]);
+
+                // Render Data Modules
+                renderTimetable(timetable, section);
+                renderMarks(marks);
+                renderODRequests(requests);
+                renderAbsences(absences);
+                renderStudentList(students);
+
+            } catch (error) {
+                console.error("Failed to load cohort data", error);
+                alert("Error loading data: " + error.message);
+            }
+        }
+
+        function renderTimetable(data, selectedSection) {
+            const container = document.getElementById('timetableContainer');
+            // Check if any results were returned
+            if (data.length === 0) {
+                container.innerHTML = '<p>No timetable scheduled for this cohort section yet. Please ask the Admin to run the Timetable Generator.</p>';
+                return;
+            }
+
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            let html = '';
+
+            // Build the table headers
+            days.forEach(day => html += `<div class="tt-cell tt-header">${day}</div>`);
+
+            // Assuming a simple 3 slots per day representation 
+            // In a deeper real app, dynamic clustering by start_time would occur here
+            for (let i = 0; i < 3; i++) {
+                days.forEach(day => {
+                    const slotTasks = data.filter(t => t.day_of_week === day);
+                    const task = slotTasks[i];
+                    if (task) {
+                        html += `<div class="tt-cell" style="cursor:default;">
+                            <strong style="font-size:1.1em; color:var(--primary-color);">${task.subject_name}</strong><br>
+                            <small>${task.start_time.substring(0, 5)} - ${task.end_time.substring(0, 5)}</small><br>
+                            <small>Class: ${task.class_name}</small><br>
+                            <small>Room: ${task.classroom_name}</small><br>
+                            <small>Prof: ${task.teacher_name}</small>
+                        </div>`;
+                    } else {
+                        html += `<div class="tt-cell" style="background:#fafafa; border-color:#e0e0e0; color:#aaa; font-style:italic;">No Class</div>`;
+                    }
+                });
+            }
+            container.innerHTML = html;
+        }
+
+        function renderMarks(marks) {
+            const tbody = document.querySelector('#marksTable tbody');
+            if (marks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No academic records submitted for students in this cohort yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = marks.map(m => `
+                <tr>
+                    <td>${m.student_name}</td>
+                    <td>${m.term}</td>
+                    <td>${m.details}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderODRequests(reqs) {
+            const container = document.getElementById('odContainer');
+            if (reqs.length === 0) {
+                container.innerHTML = '<p>No OD requests pending for this cohort.</p>';
+                return;
+            }
+
+            container.innerHTML = reqs.map(r => `
+                <div class="request-card ${r.status.toLowerCase()}">
+                    <p style="margin-bottom: 5px; font-size:0.9em;"><strong>Date:</strong> ${r.date} &nbsp;|&nbsp; <strong>Status:</strong> <span style="font-weight:bold;">${r.status}</span></p>
+                    <p style="margin-bottom: 5px;"><strong>Student:</strong> ${r.student_name}</p>
+                    <p style="margin-bottom: 12px; font-size:1.1em;">"${r.reason}"</p>
+                    ${(role === 'hod' && r.status === 'Pending') ? `
+                        <button class="btn primary" style="width:auto; padding:5px 15px; font-size: 0.85em;" onclick="actionOD(${r.id}, 'approve')">Approve Request</button>
+                        <button class="btn" style="width:auto; padding:5px 15px; font-size: 0.85em; background:var(--danger-color); color:white;" onclick="actionOD(${r.id}, 'reject')">Reject Request</button>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderAbsences(abs) {
+            const tbody = document.querySelector('#absencesTable tbody');
+            if (abs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Students in this cohort have perfect attendance.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = abs.map(a => `
+                <tr>
+                    <td>${a.date}</td>
+                    <td>${a.student_name}</td>
+                    <td>${a.reason}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderStudentList(students) {
+            const tbody = document.querySelector('#studentsTable tbody');
+            if (students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No students found for this cohort.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = students.map(s => `
+                <tr>
+                    <td>${s.roll_no}</td>
+                    <td>${s.name}</td>
+                    <td>${s.year || '-'}/${s.section || '-'}</td>
+                    <td>${s.gender || '-'}</td>
+                    <td>${s.course || '-'}</td>
+                    <td>${s.phone || '-'}</td>
+                    <td><span class="${s.fees && s.fees.toLowerCase() === 'paid' ? 'status-approved' : 'status-pending'}">${s.fees || 'Pending'}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        async function actionOD(id, action) {
+            try {
+                await api.put(`/student/od-requests/${id}/${action}`);
+                loadCohortData(); // reload actively to reflect approval visually
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+    </script>
+</body>
+
+</html>
