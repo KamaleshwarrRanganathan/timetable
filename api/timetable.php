@@ -8,6 +8,14 @@ if ($method === 'GET') {
     // Return formatted timetable
     $year = $_GET['year'] ?? '';
     $section = $_GET['section'] ?? '';
+    $role = $_GET['role'] ?? '';
+    $teacher_id = $_GET['teacher_id'] ?? '';
+
+    // Strict enforce course/section filtering for students
+    if ($role === 'student' && ($year === '' || $section === '')) {
+        echo json_encode([]);
+        exit();
+    }
     
     $query = "
         SELECT t.id, t.day_of_week, t.start_time, t.end_time,
@@ -31,11 +39,24 @@ if ($method === 'GET') {
         $query .= " AND c.section = ?";
         $params[] = $section;
     }
+    if ($role === 'teacher' && $teacher_id !== '') {
+        $query .= " AND t.teacher_id = ?";
+        $params[] = $teacher_id;
+    }
     
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     echo json_encode($stmt->fetchAll());
 } elseif ($method === 'POST') {
+    $data = json_decode(file_get_contents("php://input"));
+    $user_role = $data->role ?? '';
+    
+    if ($user_role !== 'hod') {
+        http_response_code(403);
+        echo json_encode(["error" => "Forbidden: Only HOD can generate timetables."]);
+        exit();
+    }
+    
     try {
         // Run generation logic utility
         generateTimetable($pdo);

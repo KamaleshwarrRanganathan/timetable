@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <nav class="navbar">
         <h2>Admin Panel</h2>
         <div class="nav-links">
             <a href="admin-dashboard.html">Dashboard</a>
             <a href="timetable.html">View Timetable</a>
+            <a href="notifications.html" id="notifNav">Notifications</a>
             <a href="#" onclick="logout()">Logout</a>
         </div>
     </nav>
@@ -27,17 +30,13 @@
                 <h3>Manage Subjects</h3>
                 <p>Add subjects and courses</p>
             </a>
-            <div class="card" onclick="generateTimetable()" style="cursor: pointer;">
+            <div class="card" id="generateTimetableCard" onclick="generateTimetable()" style="cursor: pointer; display: none;">
                 <h3>Generate Timetable</h3>
                 <p>Run automated scheduling algorithm</p>
             </div>
             <a href="manage-students.html" class="card" id="studentMgmtCard">
                 <h3>Student Management</h3>
                 <p>View OD requests and Absences</p>
-            </a>
-            <a href="notifications.html" class="card">
-                <h3>Notifications</h3>
-                <p>View system alerts and absences</p>
             </a>
         </div>
     </div>
@@ -48,10 +47,16 @@
         document.getElementById('userRoleTitle').textContent = currRole === 'hod' ? 'HOD' : 'Admin';
         document.getElementById('adminName').textContent = localStorage.getItem('userName');
         
+        if (currRole === 'hod') {
+            document.getElementById('generateTimetableCard').style.display = 'block';
+        }
+
+
+
         async function generateTimetable() {
-            if(confirm('Are you sure you want to regenerate the entire timetable? This will overwrite current schedules.')) {
+            if (confirm('Are you sure you want to regenerate the entire timetable? This will overwrite current schedules.')) {
                 try {
-                    const res = await api.post('/timetable/generate', {});
+                    const res = await api.post('/timetable/generate', { role: currRole });
                     alert(res.message);
                 } catch (err) {
                     alert('Error: ' + err.message);
@@ -60,4 +65,5 @@
         }
     </script>
 </body>
+
 </html>

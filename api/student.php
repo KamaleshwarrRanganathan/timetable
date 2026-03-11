@@ -8,7 +8,7 @@ $resource = isset($routeParts[1]) ? $routeParts[1] : '';
 if ($method === 'GET') {
     if ($resource === 'profile') {
         $user_id = $_GET['user_id'] ?? 0;
-        $stmt = $pdo->prepare("SELECT id, username, role, name, email FROM users WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, username, role, name, email, course_year, section FROM users WHERE id = ?");
         $stmt->execute([$user_id]);
         $user = $stmt->fetch();
 

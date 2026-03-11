@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Teacher</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <nav class="navbar">
         <h2>Admin Panel - Add Teacher</h2>
@@ -21,7 +23,8 @@
             <form id="addTeacherForm">
                 <div class="input-group" style="margin-bottom: 20px;">
                     <label>Assign Role</label>
-                    <select id="newRole" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                    <select id="newRole" required
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                         <option value="student">Student</option>
                         <option value="teacher">Teacher</option>
                         <option value="hod">Head of Department</option>
@@ -48,9 +51,49 @@
         </div>
 
         <h3 style="margin-top:40px;">Registered Users List</h3>
-        <table id="teachersTable">
+        <div class="filter-section"
+            style="background:#f9f9f9; padding:15px; border-radius:8px; margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <div class="input-group" style="margin:0;">
+                <label>Filter By Role</label>
+                <select id="filterRole" style="padding:8px; border-radius:4px; border:1px solid #ddd;">
+                    <option value="">-- Select Role --</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
+                </select>
+            </div>
+
+            <div id="studentFilters" style="display:none; margin:0; gap:10px; align-items:center;">
+                <select id="filterYear" style="padding:8px; border-radius:4px; border:1px solid #ddd;">
+                    <option value="">Any Year</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+                <select id="filterSection" style="padding:8px; border-radius:4px; border:1px solid #ddd;">
+                    <option value="">Any Section</option>
+                    <option value="A">Section A</option>
+                    <option value="B">Section B</option>
+                    <option value="C">Section C</option>
+                </select>
+            </div>
+
+            <div id="extraFilters" style="display:none; margin:0; gap:15px; align-items:center;">
+                <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="filterFees"> Fees
+                    Pending</label>
+                <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="filterArrears">
+                    Arrears > 0</label>
+                <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="filterHostel">
+                    Hostel (Yes)</label>
+            </div>
+
+            <button class="btn primary" style="padding:8px 15px; width:auto; margin:0;"
+                onclick="loadFilteredUsers()">Apply Filter</button>
+        </div>
+
+        <table id="teachersTable" style="display:none;">
             <thead>
-                <tr>
+                <tr id="tableHeader">
                     <th>Role</th>
                     <th>Name</th>
                     <th>Roll No.</th>
@@ -77,25 +120,99 @@
                 await api.post('/admin/teachers', payload);
                 alert('User added successfully!');
                 e.target.reset();
-                loadTeachers();
+                if (document.getElementById('filterRole').value) {
+                    loadFilteredUsers();
+                }
             } catch (err) {
                 alert(err.message);
             }
         });
 
-        async function loadTeachers() {
+        document.getElementById('filterRole').addEventListener('change', function () {
+            const isStudent = this.value === 'student';
+            document.getElementById('studentFilters').style.display = isStudent ? 'flex' : 'none';
+            toggleExtraFilters();
+            loadFilteredUsers();
+        });
+
+        document.getElementById('filterYear').addEventListener('change', loadFilteredUsers);
+        document.getElementById('filterSection').addEventListener('change', loadFilteredUsers);
+
+        document.getElementById('filterFees').addEventListener('change', loadFilteredUsers);
+        document.getElementById('filterArrears').addEventListener('change', loadFilteredUsers);
+        document.getElementById('filterHostel').addEventListener('change', loadFilteredUsers);
+
+        function toggleExtraFilters() {
+            const isStudent = document.getElementById('filterRole').value === 'student';
+            document.getElementById('extraFilters').style.display = isStudent ? 'flex' : 'none';
+        }
+
+        async function loadFilteredUsers() {
+            const role = document.getElementById('filterRole').value;
+            const table = document.getElementById('teachersTable');
+
+            if (!role) {
+                table.style.display = 'none';
+                return;
+            }
+
+            let url = `/admin/teachers?role=${role}`;
+            if (role === 'student') {
+                const year = document.getElementById('filterYear').value;
+                const sec = document.getElementById('filterSection').value;
+                if (year) url += `&year=${year}`;
+                if (sec) url += `&section=${sec}`;
+            }
+
             try {
-                const teachers = await api.get('/admin/teachers');
+                const users = await api.get(url);
                 const tbody = document.querySelector('#teachersTable tbody');
+                const thead = document.querySelector('#tableHeader');
+
                 tbody.innerHTML = '';
-                teachers.forEach(t => {
-                    tbody.innerHTML += `<tr><td>${t.role.toUpperCase()}</td><td>${t.name}</td><td>${t.username}</td><td>${t.email}</td></tr>`;
+                table.style.display = 'table';
+
+                if (role === 'student') {
+                    thead.innerHTML = `<th>Role</th><th>Name</th><th>Roll No.</th><th>Email</th><th>Year/Sec</th><th>Fees</th><th>Arrears</th><th>Hostel</th>`;
+                } else {
+                    thead.innerHTML = `<th>Role</th><th>Name</th><th>Roll No.</th><th>Email</th>`;
+                }
+
+                const filterFees = document.getElementById('filterFees').checked;
+                const filterArrears = document.getElementById('filterArrears').checked;
+                const filterHostel = document.getElementById('filterHostel').checked;
+
+                const filteredUsers = users.filter(u => {
+                    if (role === 'student') {
+                        if (filterFees && u.fees !== 'Pending') return false;
+                        if (filterArrears && parseInt(u.arrears || 0) === 0) return false;
+                        if (filterHostel && u.hostel !== 'Yes') return false;
+                    }
+                    return true;
                 });
+
+                if (filteredUsers.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="${role === 'student' ? 8 : 4}" style="text-align:center;">No users found matching criteria</td></tr>`;
+                    return;
+                }
+
+                filteredUsers.forEach(u => {
+                    let rowHtml = `<td>${u.role.toUpperCase()}</td><td>${u.name}</td><td>${u.username}</td><td>${u.email}</td>`;
+                    if (role === 'student') {
+                        rowHtml += `<td>${u.course_year || '-'}/${u.section || '-'}</td>
+                                    <td>${u.fees || 'Pending'}</td>
+                                    <td>${u.arrears || 0}</td>
+                                    <td>${u.hostel || 'No'}</td>`;
+                    }
+                    tbody.innerHTML += `<tr>${rowHtml}</tr>`;
+                });
+
             } catch (err) {
                 console.error(err);
             }
         }
-        loadTeachers();
+        // Initial load is skipped, filtering is required.
     </script>
 </body>
+
 </html>

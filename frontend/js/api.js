@@ -80,23 +80,75 @@ function logout() {
 // Start simulation notifications if logged in
 function checkSimulatedNotifications() {
     const user_id = localStorage.getItem('userId');
+    const role = localStorage.getItem('userRole');
     if (user_id) {
-        setInterval(async () => {
+        const fetchUpdates = async () => {
             try {
                 const notifications = await api.get(`/notifications?user_id=${user_id}`);
-                const unread = notifications.filter(n => !n.is_read);
+                const unread = notifications.filter(n => {
+                    if (role === 'hod' && n.type === 'od_request' && n.od_status === 'Pending') return true;
+                    if (!n.is_read) return true;
+                    return false;
+                });
+                
+                // Update UI Badge
                 if (unread.length > 0) {
-                    if (Notification.permission === 'granted') {
+                    // Try to find Notif link by ID
+                    let notifLink = document.getElementById('notifNav');
+                    
+                    // If not found by ID, try to find by link text
+                    if (!notifLink) {
+                        const links = document.querySelectorAll('.nav-links a');
+                        for (let a of links) {
+                            if (a.textContent.includes('Notification') || a.href.includes('notifications.html')) {
+                                notifLink = a;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (notifLink) {
+                        // Keep the original text but add count if not already present
+                        const baseText = notifLink.textContent.split(' (')[0];
+                        notifLink.textContent = `${baseText} (${unread.length})`;
+                        notifLink.style.color = 'red';
+                        notifLink.style.fontWeight = 'bold';
+                    }
+
+                    if (Notification.permission === 'granted' && unread.length === 1 && !localStorage.getItem('lastNotifMsg')) {
                         new Notification('New Scheduling Update', { body: unread[0].message });
+                        localStorage.setItem('lastNotifMsg', unread[0].message); // naive debounce
+                    }
+                } else {
+                    // Reset if 0
+                    let notifLink = document.getElementById('notifNav');
+                    if (!notifLink) {
+                        const links = document.querySelectorAll('.nav-links a');
+                        for (let a of links) {
+                            if (a.textContent.includes('Notification') || a.href.includes('notifications.html')) {
+                                notifLink = a;
+                                break;
+                            }
+                        }
+                    }
+                    if (notifLink) {
+                        const baseText = notifLink.textContent.split(' (')[0];
+                        notifLink.textContent = baseText;
+                        notifLink.style.color = '';
+                        notifLink.style.fontWeight = '';
                     }
                 }
             } catch (ignore) {}
-        }, 10000);
+        };
+
+        // Fetch immediately then poll every 10s
+        fetchUpdates();
+        setInterval(fetchUpdates, 10000);
     }
 }
 
-if (Notification.permission !== 'denied' && Notification.permission !== 'granted') {
-    Notification.requestPermission();
+if (window.Notification && Notification.permission !== 'denied' && Notification.permission !== 'granted') {
+    window.Notification.requestPermission();
 }
 checkSimulatedNotifications();
 checkAuth();

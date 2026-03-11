@@ -1,11 +1,14 @@
+x`
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scheduling System - Login</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <div class="login-container">
         <div class="login-card">
@@ -14,7 +17,8 @@
             <form id="loginForm">
                 <div class="input-group" style="margin-bottom: 20px;">
                     <label>Login As</label>
-                    <select id="role" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                    <select id="role" required
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                         <option value="student">Student</option>
                         <option value="teacher">Teacher</option>
                         <option value="hod">Head of Department</option>
@@ -45,11 +49,11 @@
 
     <script src="js/api.js"></script>
     <script>
-        document.getElementById('role').addEventListener('change', function() {
+        document.getElementById('role').addEventListener('change', function () {
             const role = this.value;
             const nameGroup = document.getElementById('nameGroup');
             const rollnoLabel = document.getElementById('rollnoLabel');
-            
+
             if (role === 'student') {
                 nameGroup.style.display = 'block';
                 document.getElementById('name').required = true;
@@ -89,4 +93,5 @@
         });
     </script>
 </body>
+
 </html>

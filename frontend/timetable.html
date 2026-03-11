@@ -19,8 +19,18 @@
 
     <div class="container">
         <h2>Your Weekly Timetable</h2>
-        <div id="timetableContainer" class="timetable-grid">
-            <!-- Grid generated dynamically -->
+        
+        <!-- Day Tabs -->
+        <div class="day-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="btn day-tab" data-day="Monday">Monday</button>
+            <button class="btn day-tab" data-day="Tuesday">Tuesday</button>
+            <button class="btn day-tab" data-day="Wednesday">Wednesday</button>
+            <button class="btn day-tab" data-day="Thursday">Thursday</button>
+            <button class="btn day-tab" data-day="Friday">Friday</button>
+        </div>
+
+        <div id="timetableContainer" class="timetable-grid" style="grid-template-columns: 1fr; gap: 15px;">
+            <!-- Rendered dynamically -->
         </div>
     </div>
 
@@ -46,8 +56,10 @@
         const role = localStorage.getItem('userRole');
         const userId = localStorage.getItem('userId');
 
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'hod') {
             document.getElementById('homeLink').href = 'admin-dashboard.html';
+        } else if (role === 'student') {
+            document.getElementById('homeLink').href = 'student-dashboard.html';
         } else {
             document.getElementById('homeLink').href = 'timetable.html';
         }
@@ -73,53 +85,101 @@
             }
         });
 
+        let timetableData = [];
+        let currentDay = 'Monday';
+
         async function loadTimetable() {
             try {
                 // Determine query params based on role (simplification: admin sees all)
                 let query = '';
-                if (role === 'teacher') query = `?role=teacher&user_id=${userId}`;
-                // Setup for students would require selecting a class or binding class_id to student user
-                
-                const data = await api.get(`/timetable${query}`);
-                const container = document.getElementById('timetableContainer');
-                
-                if (data.length === 0) {
-                    container.innerHTML = '<p>No schedule generated yet.</p>';
-                    return;
+                if (role === 'teacher') {
+                    query = `?role=teacher&teacher_id=${userId}`;
+                } else if (role === 'student') {
+                    // Fetch student profile to get year and section
+                    const profile = await api.get(`/student/profile?user_id=${userId}`);
+                    if (profile.course_year && profile.section) {
+                        query = `?role=student&year=${profile.course_year}&section=${profile.section}`;
+                    } else {
+                        // Crucial fix: Do not fetch all timetables if student hasn't been assigned
+                        document.getElementById('timetableContainer').innerHTML = `<p class="error">Your profile is missing year/section assignment. Please contact the administrator to be assigned a class before viewing your timetable.</p>`;
+                        return;
+                    }
                 }
-
-                // Group by day for simple display
-                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
                 
-                let html = '';
-                days.forEach(day => {
-                    html += `<div class="tt-cell tt-header">${day}</div>`;
-                });
-
-                // Assuming a fixed 3 slots a day for the demo layout
-                for (let i = 0; i < 3; i++) {
-                    days.forEach(day => {
-                        // Find matching slot (very simplified logic for the mini-project grid presentation)
-                        const slotTasks = data.filter(t => t.day_of_week === day);
-                        const task = slotTasks[i];
-                        if(task) {
-                            html += `<div class="tt-cell">
-                                <strong>${task.subject_name}</strong><br>
-                                <small>${task.start_time} - ${task.end_time}</small><br>
-                                <small>Class: ${task.class_name}</small><br>
-                                <small>Room: ${task.classroom_name}</small><br>
-                                <small>Prof: ${task.teacher_name}</small>
-                            </div>`;
-                        } else {
-                            html += `<div class="tt-cell" style="background:#f1f1f1; border-color:#ddd;">Free</div>`;
-                        }
-                    });
-                }
-                container.innerHTML = html;
+                timetableData = await api.get(`/timetable${query}`);
+                setupTabs();
+                renderDay(currentDay);
 
             } catch (err) {
                 console.error(err);
+                document.getElementById('timetableContainer').innerHTML = `<p class="error">Failed to load timetable: ${err.message}</p>`;
             }
+        }
+
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.day-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    // Remove active styling from all tabs
+                    tabs.forEach(t => {
+                        t.style.backgroundColor = '';
+                        t.style.color = '';
+                    });
+                    
+                    // Add active style to clicked tab
+                    const clickedTab = e.target;
+                    clickedTab.style.backgroundColor = 'var(--primary-color)';
+                    clickedTab.style.color = 'white';
+                    
+                    currentDay = clickedTab.dataset.day;
+                    renderDay(currentDay);
+                });
+
+                // Set initial active state
+                if (tab.dataset.day === currentDay) {
+                    tab.style.backgroundColor = 'var(--primary-color)';
+                    tab.style.color = 'white';
+                }
+            });
+        }
+
+        function renderDay(day) {
+            const container = document.getElementById('timetableContainer');
+            if (timetableData.length === 0) {
+                container.innerHTML = '<p>No schedule generated yet.</p>';
+                return;
+            }
+
+            // Filter tasks for the selected day and auto-sort by start_time string
+            let dayTasks = timetableData.filter(t => t.day_of_week === day);
+            dayTasks.sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+            if (dayTasks.length === 0) {
+                container.innerHTML = `<p>No classes scheduled for ${day}.</p>`;
+                return;
+            }
+
+            let html = '';
+            dayTasks.forEach(task => {
+                // Format time string to be cleaner (e.g. 09:00:00 -> 09:00)
+                const startTime = task.start_time.substring(0, 5);
+                const endTime = task.end_time.substring(0, 5);
+                
+                html += `
+                <div class="tt-cell" style="text-align: left; padding: 15px; border-radius: 8px; border: 1px solid #ddd; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: bold; font-size: 1.1em; color: var(--primary-color);">${startTime} - ${endTime}</span>
+                        <span style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">Room ${task.classroom_name}</span>
+                    </div>
+                    <h3 style="margin: 0 0 5px 0;">${task.subject_name}</h3>
+                    <p style="margin: 0; color: #555; font-size: 0.9em;">
+                        <strong>Class:</strong> ${task.class_name} <br>
+                        <strong>Prof:</strong> ${task.teacher_name}
+                    </p>
+                </div>`;
+            });
+
+            container.innerHTML = html;
         }
         
         loadTimetable();

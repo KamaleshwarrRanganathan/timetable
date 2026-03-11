@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS student_profiles (
     semester VARCHAR(10),
     arrears INT DEFAULT 0,
     fees VARCHAR(20) DEFAULT 'Pending',
+    hostel VARCHAR(10) DEFAULT 'No',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

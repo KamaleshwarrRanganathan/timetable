@@ -58,12 +58,19 @@
                 const data = await api.get(`/notifications?user_id=${userId}`);
                 const list = document.getElementById('notificationsList');
 
-                if (data.length === 0) {
+                const visibleNotifications = data.filter(n => {
+                    if (role === 'hod' && n.type === 'od_request' && n.od_status && n.od_status !== 'Pending') {
+                        return false;
+                    }
+                    return true;
+                });
+
+                if (visibleNotifications.length === 0) {
                     list.innerHTML = '<p>You have no notifications.</p>';
                     return;
                 }
 
-                list.innerHTML = data.map(n => {
+                list.innerHTML = visibleNotifications.map(n => {
                     let actions = '';
                     if (role === 'hod' && n.type === 'od_request') {
                         if (n.od_status === 'Pending') {
@@ -85,7 +92,7 @@
                     return `
                     <div class="notification-card ${n.is_read ? '' : 'unread'}">
                         <div>
-                            <p>${n.message}</p>
+                            <p style="white-space: pre-wrap; margin-top: 0;">${n.message}</p>
                             <small class="text-muted">${new Date(n.created_at).toLocaleString()}</small>
                         </div>
                         <div>

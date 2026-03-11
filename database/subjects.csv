@@ -1,0 +1,42 @@
+Year,Semester,Course Code,Subject Name,Category
+1,1,CS101,Introduction to Programming (C/Python),Core
+1,1,MA101,Engineering Mathematics I,Basic Science
+1,1,PH101,Engineering Physics,Basic Science
+1,1,CY101,Engineering Chemistry,Basic Science
+1,1,HS101,English for Communication,Humanities
+1,1,ME101,Basic Mechanical Engineering,Engineering Science
+1,2,CS102,Advanced Programming & Logic,Core
+1,2,MA102,Engineering Mathematics II,Basic Science
+1,2,EE101,Basic Electrical & Electronics Engineering,Engineering Science
+1,2,EG101,Engineering Graphics & Design,Engineering Science
+1,2,EV101,Environmental Science,Basic Science
+1,2,CS103,Digital Logic Design,Core
+2,3,CS201,Data Structures & Algorithms (DSA),Core
+2,3,CS202,Computer Organization & Architecture,Core
+2,3,MA201,Discrete Mathematics,Basic Science
+2,3,CS203,Object-Oriented Programming (Java/C++),Core
+2,3,EC201,Analog & Digital Communication,Engineering Science
+2,4,CS204,Operating Systems,Core
+2,4,CS205,Database Management Systems (DBMS),Core
+2,4,CS206,Design & Analysis of Algorithms,Core
+2,4,MA202,Probability & Statistics,Basic Science
+2,4,CS207,Microprocessors & Interfacing,Core
+3,5,CS301,Computer Networks,Core
+3,5,CS302,Theory of Computation (Automata),Core
+3,5,CS303,Software Engineering & Agile,Core
+3,5,CS304,Artificial Intelligence,Core
+3,5,EL101,Open Elective I,Elective
+3,6,CS305,Compiler Design,Core
+3,6,CS306,Machine Learning,Core
+3,6,CS307,Web Technologies (Full Stack),Core
+3,6,CS308,Cyber Security & Cryptography,Core
+3,6,EL102,Professional Elective I,Elective
+4,7,CS401,Cloud Computing & Virtualization,Core
+4,7,CS402,Distributed Systems,Core
+4,7,EL103,Professional Elective II,Elective
+4,7,EL104,Professional Elective III,Elective
+4,7,PRJ1,Capstone Project Phase I,Project
+4,8,CS403,Human-Computer Interaction (UI/UX),Core
+4,8,EL105,Professional Elective IV,Elective
+4,8,PRJ2,Capstone Project Phase II,Project
+4,8,INT1,Industrial Internship/Seminar,Project
